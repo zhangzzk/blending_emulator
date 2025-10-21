@@ -12,8 +12,12 @@ import utils, data_utils
 # from scipy.stats import bootstrap
 
 
+# maximum separation for two emulators
 R_MAX = 7/3600
 R_MAX_CLA = 3/3600
+
+# from where to use the detection probability, below which p=0
+DETECTION_THRESH = 0.
 
 CLASSIFICATION_NAMES_SEC = ['Re_input_s', 'r_input_s', 'sersic_n_input_s', 'axis_ratio_input_s', 'distance']
 
@@ -130,55 +134,35 @@ def bootstrap_sum_diff(d1,d2,n_resamples=10):
     return np.array([stat, bootstrap_ci.low, bootstrap_ci.high])
 
 
-def first_term(x,y,dz,p_bin):
-    # print(dz,p_bin)
-    idx_z = np.where((x['redshift_input_s']>dz[0])&(x['redshift_input_s']<dz[1]))[0]
-    idx_p = np.where((x['redshift_input_p']>p_bin[0])&(x['redshift_input_p']<p_bin[1]))[0] # only slice, not bin yet
-    idx = np.intersect1d(idx_z, idx_p, assume_unique=True)
-    # print(len(idx))
+def first_term(x,y,dz,nz):
+    idx = np.where((x['redshift_input_s']>dz[0])&(x['redshift_input_s']<dz[1]))[0]
 
     detection_weights = x['detection'].array
-    detection_weights[detection_weights<detection_thresh] = 0. # to avoid far outliers of R response]
+    detection_weights[detection_weights<DETECTION_THRESH] = 0. # to avoid far outliers of R response]
 
     boot_values = y[idx]*detection_weights[idx] 
-    # return np.sum(boot_values) /(dz[1]-dz[0]) #
     return boot_values /(dz[1]-dz[0])
 
-def second_term(x,y,dz,p_bin):
-    min_z, max_z = max(p_bin[0],dz[0]), min(p_bin[1],dz[1])
-    # print(dz,min_z,max_z)
-    idx_p = np.where((x['redshift_input_p']>min_z)&(x['redshift_input_p']<max_z))[0] # only slice, not bin yet
-    idx = idx_p
-    # print(idx,x['redshift_input_p'].iloc[idx])
+def second_term(x,y,dz,nz):
+    idx = np.where((x['redshift_input_p']>dz[0])&(x['redshift_input_p']<dz[1]))[0]
 
     detection_weights = x['detection'].array
-    detection_weights[detection_weights<detection_thresh] = 0. # to avoid far outliers of R response]
+    detection_weights[detection_weights<DETECTION_THRESH] = 0. # to avoid far outliers of R response]
 
     boot_values = y[idx]*detection_weights[idx] 
-    # return np.sum(boot_values) /(dz[1]-dz[0]) #
     return boot_values /(dz[1]-dz[0])
 
-def n_correction(x,y,dz,p_bin,cla_cat):
-    normalization = retrieve_normalization(cla_cat,p_bin)
-    f = lambda idx: bootstrap_sum_diff(first_term(x,y,dz[idx],p_bin)/normalization,
-                                        second_term(x,y,dz[idx],p_bin)/normalization)
+def n_correction(x,y,dz,nz,norm):
+    f = lambda idx: (np.sum(first_term(x,y,dz[idx],nz)) - np.sum(second_term(x,y,dz[idx],nz)))/norm
     delta = Parallel(n_jobs=-1, backend='threading')(delayed(f)(i) for i in range(len(dz)))
     return np.array(delta)
 
-def term1_normed(x,y,dz,p_bin,cla_cat):
-    normalization = retrieve_normalization(cla_cat,p_bin)
-    f = lambda idx: np.sum(first_term(x,y,dz[idx],p_bin)/normalization)
+def term1_normed(x,y,dz,nz,norm):
+    f = lambda idx: np.sum(first_term(x,y,dz[idx],nz)/norm)
     term1 = Parallel(n_jobs=-1, backend='threading')(delayed(f)(i) for i in range(len(dz)))
     return term1
 
-def term2_normed(x,y,dz,p_bin,cla_cat):
-    normalization = retrieve_normalization(cla_cat,p_bin)
-    f = lambda idx: np.sum(second_term(x,y,dz[idx],p_bin)/normalization)
+def term2_normed(x,y,dz,nz,norm):
+    f = lambda idx: np.sum(second_term(x,y,dz[idx],nz)/norm)
     term2 = Parallel(n_jobs=-1, backend='threading')(delayed(f)(i) for i in range(len(dz)))
     return term2
-
-def retrieve_normalization(cla_cat,p_bin):
-    idx = np.where((cla_cat['redshift_input_p']>p_bin[0])&(cla_cat['redshift_input_p']<p_bin[1]))[0]
-    detection_weights = cla_cat['detection'].array
-    detection_weights[detection_weights<detection_thresh] = 0. # to avoid far outliers of R response]
-    return np.sum(detection_weights[idx])
