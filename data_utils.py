@@ -10,7 +10,7 @@ def source_select_reg(dataset,cuts=[[18,26],[18,26],[0.1,1.5],[0.1,1.5],[0,10]])
                         (dataset['r_input_s']>cuts[0][0])&(dataset['r_input_s']<cuts[0][1])\
                         &(dataset['r_input_p']>cuts[1][0])&(dataset['r_input_p']<cuts[1][1])\
                         &(dataset['Re_input_s']>cuts[2][0])&(dataset['Re_input_s']<cuts[2][1])\
-                       &(dataset['Re_input_p']>cuts[3][0])&(dataset['Re_input_p']<cuts[3][1])\
+                        &(dataset['Re_input_p']>cuts[3][0])&(dataset['Re_input_p']<cuts[3][1])\
                         &(dataset['distance']>cuts[4][0])&(dataset['distance']<cuts[4][1])\
     ))[0] 
     dataset = dataset.iloc[idx_sel].reset_index()
@@ -22,9 +22,9 @@ def source_select_cla(dataset,cuts=[[18,26],[18,26],[0.1,1.5],[0.1,1.5],[0,10]])
     '''
     idx_sel = np.where(
                         (dataset['r_input_p']>cuts[1][0])&(dataset['r_input_p']<cuts[1][1])\
-                       &(dataset['Re_input_p']>cuts[3][0])&(dataset['Re_input_p']<cuts[3][1])\
+                        &(dataset['Re_input_p']>cuts[3][0])&(dataset['Re_input_p']<cuts[3][1])\
                         &((dataset['distance']>cuts[4][0])&(dataset['distance']<cuts[4][1])|(~dataset['neighbored']))
-                       )[0]
+                        )[0]
     dataset = dataset.iloc[idx_sel].reset_index()
     return dataset
 
