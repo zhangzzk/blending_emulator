@@ -1,6 +1,19 @@
-# Ignore Python cache files
+# Python cache
 __pycache__/
-*.py[cod]
+*.pyc
+*.pyo
+*.pyd
 
-# Ignore Jupyter Notebook checkpoints
+# Jupyter
 .ipynb_checkpoints/
+
+# Data
+*.feather
+*.csv
+*.hdf5
+
+# Editors
+*.swp
+*.swo
+*~
+
