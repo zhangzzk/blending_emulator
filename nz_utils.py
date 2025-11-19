@@ -86,7 +86,7 @@ def icat2reg(icat_i_pri,icat_i_sec,model,conditions):
     # reg_features_i['response'] = data_utils.reverse_standardize(response_pred, y_mean, y_std)
     return reg_features_i
 
-def icat2cla(icat_i_pri,icat_i_sec,model,conditions,cla_k=2):
+def icat2cla(icat_i_pri,icat_i_sec,model,conditions,cla_k=2,predict=True):
 
     # make a copy for classification
     reg_features_i_cla = make_reg_features(icat_i_pri, icat_i_sec, r_max=999, k=cla_k) # r_max=99 makes sure there is at least one neighbour; this is important
@@ -102,9 +102,34 @@ def icat2cla(icat_i_pri,icat_i_sec,model,conditions,cla_k=2):
                                         pixel_rms=conditions['pixel_rms'],pixel_size=conditions['pixel_size'],
                                         psf_fwhm=conditions['psf_fwhm'],moffat_beta=conditions['moffat_beta'])
     
-    # emulator detections 
-    detect_pred = data_utils.xgb_pred(model, reg_features_i_cla)
-    reg_features_i_cla['detection'] = detect_pred
+    if predict:
+        # emulator detections 
+        detect_pred = data_utils.xgb_pred(model, reg_features_i_cla)
+        reg_features_i_cla['detection'] = detect_pred
+        
+    return reg_features_i_cla
+
+
+def icat2cla_v2(icat_i_pri,icat_i_sec,model,cla_k=2,predict=True):
+
+    # make a copy for classification
+    reg_features_i_cla = make_reg_features(icat_i_pri, icat_i_sec, r_max=999, k=cla_k) # r_max=99 makes sure there is at least one neighbour; this is important
+    idx_cla = np.where(reg_features_i_cla['distance']>R_MAX_CLA)[0]
+    reg_features_i_cla.loc[idx_cla,CLASSIFICATION_NAMES_SEC] = np.nan
+    reg_features_i_cla['neighbored'] = np.full(reg_features_i_cla.shape[0],True)
+    reg_features_i_cla.loc[idx_cla,'neighbored'] = False
+
+    reg_features_i_cla['distance'] *= 3600
+
+    # rescale everything
+    # !!! Did I do the boudary selection?
+    reg_features_i_cla = data_utils.rescale_v2(reg_features_i_cla)
+    
+    if predict:
+        # emulator detections 
+        detect_pred = data_utils.xgb_pred(model, reg_features_i_cla)
+        reg_features_i_cla['detection'] = detect_pred
+        
     return reg_features_i_cla
 
 
@@ -134,7 +159,7 @@ def bootstrap_sum_diff(d1,d2,n_resamples=10):
     return np.array([stat, bootstrap_ci.low, bootstrap_ci.high])
 
 
-def first_term(x,y,dz,nz):
+def first_term(x,y,dz):
     idx = np.where((x['redshift_input_s']>dz[0])&(x['redshift_input_s']<dz[1]))[0]
 
     detection_weights = x['detection'].array
@@ -143,7 +168,7 @@ def first_term(x,y,dz,nz):
     boot_values = y[idx]*detection_weights[idx] 
     return boot_values /(dz[1]-dz[0])
 
-def second_term(x,y,dz,nz):
+def second_term(x,y,dz):
     idx = np.where((x['redshift_input_p']>dz[0])&(x['redshift_input_p']<dz[1]))[0]
 
     detection_weights = x['detection'].array
@@ -152,17 +177,17 @@ def second_term(x,y,dz,nz):
     boot_values = y[idx]*detection_weights[idx] 
     return boot_values /(dz[1]-dz[0])
 
-def n_correction(x,y,dz,nz,norm):
-    f = lambda idx: (np.sum(first_term(x,y,dz[idx],nz)) - np.sum(second_term(x,y,dz[idx],nz)))/norm
+def n_correction(x,y,dz,norm):
+    f = lambda idx: (np.sum(first_term(x,y,dz[idx])) - np.sum(second_term(x,y,dz[idx])))/norm
     delta = Parallel(n_jobs=-1, backend='threading')(delayed(f)(i) for i in range(len(dz)))
     return np.array(delta)
 
-def term1_normed(x,y,dz,nz,norm):
-    f = lambda idx: np.sum(first_term(x,y,dz[idx],nz)/norm)
+def term1_normed(x,y,dz,norm):
+    f = lambda idx: np.sum(first_term(x,y,dz[idx])/norm)
     term1 = Parallel(n_jobs=-1, backend='threading')(delayed(f)(i) for i in range(len(dz)))
     return term1
 
-def term2_normed(x,y,dz,nz,norm):
-    f = lambda idx: np.sum(second_term(x,y,dz[idx],nz)/norm)
+def term2_normed(x,y,dz,norm):
+    f = lambda idx: np.sum(second_term(x,y,dz[idx])/norm)
     term2 = Parallel(n_jobs=-1, backend='threading')(delayed(f)(i) for i in range(len(dz)))
     return term2

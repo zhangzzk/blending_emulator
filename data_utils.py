@@ -62,6 +62,45 @@ def rescale(dataset,
 
     return dataset
 
+
+def rescale_v2(dataset):
+    """
+    Rescale quantities using per-row conditions.
+    Assumes the following columns exist in `dataset`:
+    ['pixel_rms', 'pixel_size', 'zero_point', 'psf_fwhm', 'moffat_beta']
+    """
+    
+    # Compute psf_size for each row
+    dataset["psf_size"] = moffat_fwhm2Re(dataset["psf_fwhm_input_p"], dataset["moffat_beta_input_p"])
+    
+    # Aperture rms (vectorized)
+    dataset["aperture_rms"] = (
+        dataset["pixel_rms_input_p"] * (dataset["psf_size"] / dataset["pixel_size_input_p"])**2 * np.pi
+    )
+    
+    # Convolved sizes
+    dataset["post_Re_p"] = _convolved_size(dataset["Re_input_p"], dataset["psf_size"])
+    dataset["post_Re_s"] = _convolved_size(dataset["Re_input_s"], dataset["psf_size"])
+    
+    # Unit transformation
+    dataset["distance_scaled"] = dataset["distance"] / dataset["post_Re_p"]
+    # Or alternative:
+    # dataset["distance_scaled"] = dataset["distance"] / (dataset["post_Re_p"] + dataset["post_Re_s"])
+    
+    dataset["Re_input_p_scaled"] = dataset["Re_input_p"] / dataset["post_Re_p"]
+    dataset["Re_input_s_scaled"] = dataset["Re_input_s"] / dataset["post_Re_s"]
+    
+    # Fluxes
+    flux_input_p = mag2flux(dataset["r_input_p"], dataset["zero_point_input_p"])
+    flux_input_s = mag2flux(dataset["r_input_s"], dataset["zero_point_input_p"])
+    dataset["flux_ratio"] = np.log10(flux_input_p / flux_input_s)
+    
+    # Scaled magnitudes
+    dataset["r_input_p_scaled"] = flux2mag(flux_input_p / dataset["aperture_rms"], dataset["zero_point_input_p"])
+    dataset["r_input_s_scaled"] = flux2mag(flux_input_s / dataset["aperture_rms"], dataset["zero_point_input_p"])
+    
+    return dataset
+
 def moffat_fwhm2Re(fwhm,beta):
     factor = np.sqrt((2**(1/(beta-1))-1)/(2**(1/beta)-1))/2
     return fwhm*factor

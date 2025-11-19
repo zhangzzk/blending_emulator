@@ -50,8 +50,8 @@ def kdt_neighbor_finder(pos1, pos2,
     dst,ind = kdt_in.query(pos1,k=k,distance_upper_bound=r_max,workers=-1)
 
     found_idx = np.where((ind.reshape(-1) != pos2.shape[0])&\
-                         (dst.reshape(-1) > r_min)\
-                         )[0]
+                        (dst.reshape(-1) > r_min)\
+                        )[0]
     
     idx1 = np.array([np.arange(0,pos1.shape[0]),]*k).T.reshape(-1)[found_idx]
     idx2 = ind.reshape(-1)[found_idx]
@@ -72,14 +72,14 @@ def boundary_selection(cat,keys,boundary):
     assert len(keys)==boundary.shape[0]
     # assert len(keys)==7
     idx = np.where(
-                 (cat[keys[0]].values>boundary[0,0])&(cat[keys[0]].values<boundary[0,1])\
+                (cat[keys[0]].values>boundary[0,0])&(cat[keys[0]].values<boundary[0,1])\
                 &(cat[keys[1]].values>boundary[1,0])&(cat[keys[1]].values<boundary[1,1])\
                 &(cat[keys[2]].values>boundary[2,0])&(cat[keys[2]].values<boundary[2,1])\
                 &(cat[keys[3]].values>boundary[3,0])&(cat[keys[3]].values<boundary[3,1])\
                 # &(cat[keys[4]].values>boundary[4,0])&(cat[keys[4]].values<boundary[4,1])\
                 # &(cat[keys[5]].values>boundary[5,0])&(cat[keys[5]].values<boundary[5,1])\
                 &(cat[keys[6]].values>boundary[6,0])&(cat[keys[6]].values<boundary[6,1])\
-                   )[0]
+                )[0]
     
     return idx
 
@@ -88,8 +88,8 @@ def remove_detection_w_bright_neighbour_prob(pos,flux,detection_prob,ratio_max=1
     kdt_in = KDTree(pos)
     dst,ind = kdt_in.query(pos,k=30,distance_upper_bound=r_max,workers=-1)
     found_idx = np.where((ind != pos.shape[0])&\
-                         (dst > r_min)\
-                         )
+                        (dst > r_min)\
+                        )
     
     flux_neighbor = np.full(ind.shape,0.)
     flux_neighbor[found_idx] = flux[ind[found_idx]]
@@ -123,9 +123,9 @@ def contour_plot():
     for i,comb in enumerate(combs):
 
         hist1, xedges1, yedges1 = np.histogram2d(reg_features_detected[comb[0]].iloc[idx],
-                                                 reg_features_detected[comb[1]].iloc[idx],bins=10);
+                                                reg_features_detected[comb[1]].iloc[idx],bins=10);
         hist2, xedges2, yedges2 = np.histogram2d(x_test[comb[0]].iloc[idx],
-                                                 x_test[comb[1]].iloc[idx],bins=10);
+                                                x_test[comb[1]].iloc[idx],bins=10);
 
         x1,y1 = np.meshgrid(xedges1[1:], yedges1[1:])
         x2,y2 = np.meshgrid(xedges2[1:], yedges2[1:])
