@@ -21,5 +21,4 @@ __pycache__/
 .*
 
 # TEMP
-galsbi_cat.ipynb
-galsbi_config.py
+temp/
