@@ -19,3 +19,7 @@ __pycache__/
 
 # Hidden
 .*
+
+# TEMP
+galsbi_cat.ipynb
+galsbi_config.py
